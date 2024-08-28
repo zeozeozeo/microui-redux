@@ -60,6 +60,12 @@ pub struct IdManager {
     id_stack: Vec<Id>,
 }
 
+impl Default for IdManager {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl IdManager {
     pub fn new() -> Self {
         Self { last_id: None, id_stack: Vec::new() }
@@ -67,6 +73,10 @@ impl IdManager {
 
     pub fn len(&self) -> usize {
         self.id_stack.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.id_stack.is_empty()
     }
 
     pub fn last_id(&self) -> Option<Id> {
@@ -78,7 +88,7 @@ impl IdManager {
     }
 
     fn hash_step(h: u32, n: u32) -> u32 {
-        (h ^ n).wrapping_mul(16777619 as u32)
+        (h ^ n).wrapping_mul(16777619_u32)
     }
 
     fn hash_u32(hash_0: &mut Id, orig_id: u32) {
@@ -106,7 +116,7 @@ impl IdManager {
         };
         Self::hash_u32(&mut res, orig_id);
         self.last_id = Some(res);
-        return res;
+        res
     }
 
     pub fn get_id_from_ptr<T: ?Sized>(&mut self, orig_id: &T) -> Id {
@@ -118,7 +128,7 @@ impl IdManager {
         let bytes = ptr.to_le_bytes();
         Self::hash_bytes(&mut res, &bytes);
         self.last_id = Some(res);
-        return res;
+        res
     }
 
     pub fn get_id_from_str(&mut self, s: &str) -> Id {
@@ -128,7 +138,7 @@ impl IdManager {
         };
         Self::hash_str(&mut res, s);
         self.last_id = Some(res);
-        return res;
+        res
     }
 
     pub fn push_id_from_ptr<T>(&mut self, orig_id: &T) {

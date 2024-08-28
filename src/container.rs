@@ -53,7 +53,7 @@
 use super::*;
 use std::cell::RefCell;
 
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub enum Command<PR> {
     Clip {
         rect: Recti,
@@ -85,13 +85,8 @@ pub enum Command<PR> {
         payload: Rc<dyn Fn(usize, usize) -> Color4b>,
     },
     PassThrough(PR),
+    #[default]
     None,
-}
-
-impl<PR> Default for Command<PR> {
-    fn default() -> Self {
-        Command::None
-    }
 }
 
 #[derive(Clone)]
@@ -123,8 +118,8 @@ impl<PR: Clone> Container<PR> {
     pub(crate) fn new(name: &str, atlas: AtlasHandle, style: &Style, input: Rc<RefCell<Input>>) -> Self {
         Self {
             name: name.to_string(),
-            style: style.clone(),
-            atlas: atlas,
+            style: *style,
+            atlas,
             rect: Recti::default(),
             body: Recti::default(),
             content_size: Vec2i::default(),
@@ -140,7 +135,7 @@ impl<PR: Clone> Container<PR> {
             number_edit_buf: String::default(),
             number_edit: None,
             in_hover_root: false,
-            input: input,
+            input,
 
             panels: Default::default(),
         }
@@ -148,7 +143,7 @@ impl<PR: Clone> Container<PR> {
 
     pub(crate) fn prepare(&mut self) {
         self.command_list.clear();
-        assert!(self.clip_stack.len() == 0);
+        assert!(self.clip_stack.is_empty());
         self.panels.clear();
     }
 
@@ -208,7 +203,7 @@ impl<PR: Clone> Container<PR> {
         if r.x >= cr.x && r.x + r.width <= cr.x + cr.width && r.y >= cr.y && r.y + r.height <= cr.y + cr.height {
             return Clip::None;
         }
-        return Clip::Part;
+        Clip::Part
     }
 
     pub fn push_command(&mut self, cmd: Command<PR>) {
@@ -448,7 +443,11 @@ impl<PR: Clone> Container<PR> {
         r.x += r.height - self.style.padding;
         r.width -= r.height - self.style.padding;
         self.draw_control_text(label, r, ControlColor::Text, WidgetOption::NONE);
-        return if active { NodeState::Expanded } else { NodeState::Closed };
+        if active {
+            NodeState::Expanded
+        } else {
+            NodeState::Closed
+        }
     }
 
     #[must_use]
@@ -489,7 +488,7 @@ impl<PR: Clone> Container<PR> {
         let mut cs: Vec2i = self.content_size;
         cs.x += self.style.padding * 2;
         cs.y += self.style.padding * 2;
-        self.push_clip_rect(body.clone());
+        self.push_clip_rect(*body);
         if cs.y > self.body.height {
             body.width -= sz;
         }
@@ -566,7 +565,7 @@ impl<PR: Clone> Container<PR> {
         let padding = -style.padding;
         let scroll = self.scroll;
         self.layout.push_layout(expand_rect(body, padding), scroll);
-        self.layout.style = self.style.clone();
+        self.layout.style = self.style;
         self.body = body;
     }
 
@@ -629,7 +628,7 @@ impl<PR: Clone> Container<PR> {
     }
 
     pub fn get_style(&self) -> Style {
-        self.style.clone()
+        self.style
     }
 
     pub fn label(&mut self, text: &str) {
@@ -640,7 +639,7 @@ impl<PR: Clone> Container<PR> {
     #[inline(never)]
     pub fn button_ex(&mut self, label: &str, icon: Option<IconId>, opt: WidgetOption) -> ResourceState {
         let mut res = ResourceState::NONE;
-        let id: Id = if label.len() > 0 {
+        let id: Id = if !label.is_empty() {
             self.idmngr.get_id_from_str(label)
         } else {
             self.idmngr.get_id_u32(icon.unwrap().into())
@@ -651,23 +650,20 @@ impl<PR: Clone> Container<PR> {
             res |= ResourceState::SUBMIT;
         }
         self.draw_control_frame(id, r, ControlColor::Button, opt);
-        if label.len() > 0 {
+        if !label.is_empty() {
             self.draw_control_text(label, r, ControlColor::Text, opt);
         }
-        match icon {
-            Some(icon) => {
-                let color = self.style.colors[ControlColor::Text as usize];
-                self.draw_icon(icon, r, color);
-            }
-            _ => (),
+        if let Some(icon) = icon {
+            let color = self.style.colors[ControlColor::Text as usize];
+            self.draw_icon(icon, r, color);
         }
-        return res;
+        res
     }
 
     #[inline(never)]
     pub fn button_ex2(&mut self, label: &str, slot: Option<SlotId>, opt: WidgetOption) -> ResourceState {
         let mut res = ResourceState::NONE;
-        let id: Id = if label.len() > 0 {
+        let id: Id = if !label.is_empty() {
             self.idmngr.get_id_from_str(label)
         } else {
             self.idmngr.get_id_u32(slot.unwrap().into())
@@ -678,23 +674,20 @@ impl<PR: Clone> Container<PR> {
             res |= ResourceState::SUBMIT;
         }
         self.draw_control_frame(id, r, ControlColor::Button, opt);
-        if label.len() > 0 {
+        if !label.is_empty() {
             self.draw_control_text(label, r, ControlColor::Text, opt);
         }
-        match slot {
-            Some(slot) => {
-                let color = self.style.colors[ControlColor::Text as usize];
-                self.draw_slot(slot, r, color);
-            }
-            _ => (),
+        if let Some(slot) = slot {
+            let color = self.style.colors[ControlColor::Text as usize];
+            self.draw_slot(slot, r, color);
         }
-        return res;
+        res
     }
 
     #[inline(never)]
     pub fn button_ex3(&mut self, label: &str, slot: Option<SlotId>, opt: WidgetOption, f: Rc<dyn Fn(usize, usize) -> Color4b>) -> ResourceState {
         let mut res = ResourceState::NONE;
-        let id: Id = if label.len() > 0 {
+        let id: Id = if !label.is_empty() {
             self.idmngr.get_id_from_str(label)
         } else {
             self.idmngr.get_id_u32(slot.unwrap().into())
@@ -705,17 +698,14 @@ impl<PR: Clone> Container<PR> {
             res |= ResourceState::SUBMIT;
         }
         self.draw_control_frame(id, r, ControlColor::Button, opt);
-        if label.len() > 0 {
+        if !label.is_empty() {
             self.draw_control_text(label, r, ControlColor::Text, opt);
         }
-        match slot {
-            Some(slot) => {
-                let color = self.style.colors[ControlColor::Text as usize];
-                self.draw_slot_with_function(slot, r, color, f);
-            }
-            _ => (),
+        if let Some(slot) = slot {
+            let color = self.style.colors[ControlColor::Text as usize];
+            self.draw_slot_with_function(slot, r, color, f);
         }
-        return res;
+        res
     }
 
     #[inline(never)]
@@ -727,7 +717,7 @@ impl<PR: Clone> Container<PR> {
         self.update_control(id, r, WidgetOption::NONE);
         if self.input.borrow().mouse_pressed.is_left() && self.focus == Some(id) {
             res |= ResourceState::CHANGE;
-            *state = *state == false;
+            *state = !(*state);
         }
         self.draw_control_frame(id, box_0, ControlColor::Base, WidgetOption::NONE);
         if *state {
@@ -736,7 +726,7 @@ impl<PR: Clone> Container<PR> {
         }
         r = rect(r.x + box_0.width, r.y, r.width - box_0.width, r.height);
         self.draw_control_text(label, r, ControlColor::Text, WidgetOption::NONE);
-        return res;
+        res
     }
 
     #[inline(never)]
@@ -746,9 +736,9 @@ impl<PR: Clone> Container<PR> {
         if self.focus == Some(id) {
             let mut len = buf.len();
 
-            if self.input.borrow().input_text.len() > 0 {
+            if !self.input.borrow().input_text.is_empty() {
                 buf.push_str(self.input.borrow().input_text.as_str());
-                len += self.input.borrow().input_text.len() as usize;
+                len += self.input.borrow().input_text.len();
                 res |= ResourceState::CHANGE
             }
 
@@ -778,7 +768,7 @@ impl<PR: Clone> Container<PR> {
         } else {
             self.draw_control_text(buf.as_str(), r, ControlColor::Text, opt);
         }
-        return res;
+        res
     }
 
     #[inline(never)]
@@ -794,25 +784,22 @@ impl<PR: Clone> Container<PR> {
             let res: ResourceState = self.textbox_raw(&mut temp, id, r, WidgetOption::NONE);
             self.number_edit_buf = temp;
             if res.is_submitted() || self.focus != Some(id) {
-                match self.number_edit_buf.parse::<f32>() {
-                    Ok(v) => {
-                        *value = v as Real;
-                        self.number_edit = None;
-                    }
-                    _ => (),
+                if let Ok(v) = self.number_edit_buf.parse::<f32>() {
+                    *value = v as Real;
+                    self.number_edit = None;
                 }
                 self.number_edit = None;
             } else {
                 return ResourceState::ACTIVE;
             }
         }
-        return ResourceState::NONE;
+        ResourceState::NONE
     }
 
     pub fn textbox_ex(&mut self, buf: &mut String, opt: WidgetOption) -> ResourceState {
         let id: Id = self.idmngr.get_id_from_ptr(buf);
         let r: Recti = self.layout.next();
-        return self.textbox_raw(buf, id, r, opt);
+        self.textbox_raw(buf, id, r, opt)
     }
 
     #[inline(never)]
@@ -851,7 +838,7 @@ impl<PR: Clone> Container<PR> {
         let mut buff = String::new();
         buff.push_str(format!("{:.*}", precision, value).as_str());
         self.draw_control_text(buff.as_str(), base, ControlColor::Text, opt);
-        return res;
+        res
     }
 
     #[inline(never)]
@@ -874,6 +861,6 @@ impl<PR: Clone> Container<PR> {
         let mut buff = String::new();
         buff.push_str(format!("{:.*}", precision, value).as_str());
         self.draw_control_text(buff.as_str(), base, ControlColor::Text, opt);
-        return res;
+        res
     }
 }

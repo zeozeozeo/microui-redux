@@ -125,7 +125,7 @@ impl LayoutManager {
     }
 
     pub fn end_column(&mut self) {
-        let b = self.top().clone();
+        let b = *self.top();
         self.stack.pop();
         let row = self.row_stack.pop().unwrap();
         self.current_row_widths.clear();
@@ -161,18 +161,10 @@ impl LayoutManager {
 
     pub fn row(&mut self, widths: &[i32], height: i32) {
         self.current_row_widths.clear();
-        for i in 0..widths.len() {
-            self.current_row_widths.push(widths[i]);
+        for width in widths.iter().copied() {
+            self.current_row_widths.push(width);
         }
         self.row_for_layout(height);
-    }
-
-    pub fn set_width(&mut self, width: i32) {
-        self.top_mut().size.width = width;
-    }
-
-    pub fn set_height(&mut self, height: i32) {
-        self.top_mut().size.height = height;
     }
 
     pub fn next(&mut self) -> Recti {
@@ -192,7 +184,7 @@ impl LayoutManager {
 
         res.x = self.top().position.x;
         res.y = self.top().position.y;
-        res.width = if self.current_row_widths.len() > 0 {
+        res.width = if !self.current_row_widths.is_empty() {
             self.current_row_widths[self.item_index]
         } else {
             self.top().size.width
@@ -232,6 +224,6 @@ impl LayoutManager {
         self.top_mut().max.x = max(self.top().max.x, res.x + res.width);
         self.top_mut().max.y = max(self.top().max.y, res.y + res.height);
         self.last_rect = res;
-        return self.last_rect;
+        self.last_rect
     }
 }

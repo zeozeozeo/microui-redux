@@ -138,7 +138,7 @@ impl Packer {
         let height = max(0, config.height + config.rectangle_padding - 2 * config.border_padding);
 
         Packer {
-            config: config,
+            config,
             packer: DensePacker::new(width, height),
         }
     }
@@ -210,13 +210,9 @@ impl DensePacker {
         let width = max(0, width);
         let height = max(0, height);
 
-        let skylines = vec![Skyline { left: 0, y: 0, width: width }];
+        let skylines = vec![Skyline { left: 0, y: 0, width }];
 
-        DensePacker {
-            width: width,
-            height: height,
-            skylines: skylines,
-        }
+        DensePacker { width, height, skylines }
     }
 
     /// Get size that this packer was created with.
@@ -236,7 +232,7 @@ impl DensePacker {
         // Add a new skyline to fill the gap
         // The new skyline starts where the furthest one ends
         let left = self.skylines.last().unwrap().right();
-        self.skylines.push(Skyline { left: left, y: 0, width: width - left });
+        self.skylines.push(Skyline { left, y: 0, width: width - left });
     }
 
     /// Pack new rectangle. Returns position of the newly added rectangle. If there is not enough space returns `None`.
@@ -284,8 +280,8 @@ impl DensePacker {
     }
 
     fn find_skyline(&self, w: i32, h: i32, allow_rotation: bool) -> Option<(usize, Recti)> {
-        let mut bottom = std::i32::MAX;
-        let mut width = std::i32::MAX;
+        let mut bottom = i32::MAX;
+        let mut width = i32::MAX;
         let mut index = None;
         let mut rect = Rect::new(0, 0, 0, 0);
 
@@ -312,11 +308,7 @@ impl DensePacker {
             }
         }
 
-        if let Some(index) = index {
-            Some((index, rect))
-        } else {
-            None
-        }
+        index.map(|index| (index, rect))
     }
 
     fn split(&mut self, i: usize, rect: &Recti) {

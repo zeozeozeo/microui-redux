@@ -96,47 +96,44 @@ impl<PR, R: Renderer<PR>> Canvas<PR, R> {
     #[inline(never)]
     pub fn push_rect(&mut self, dst: Recti, src: Recti, color: Color) {
         let atlas_dim = self.renderer.get_atlas().get_texture_dimension();
-        match Self::clip_rect(dst, src, self.clip) {
-            Some((dst, src)) => {
-                let x = src.x as f32 / atlas_dim.width as f32;
-                let y = src.y as f32 / atlas_dim.height as f32;
-                let w = src.width as f32 / atlas_dim.width as f32;
-                let h = src.height as f32 / atlas_dim.height as f32;
+        if let Some((dst, src)) = Self::clip_rect(dst, src, self.clip) {
+            let x = src.x as f32 / atlas_dim.width as f32;
+            let y = src.y as f32 / atlas_dim.height as f32;
+            let w = src.width as f32 / atlas_dim.width as f32;
+            let h = src.height as f32 / atlas_dim.height as f32;
 
-                let mut v0 = Vertex::default();
-                let mut v1 = Vertex::default();
-                let mut v2 = Vertex::default();
-                let mut v3 = Vertex::default();
+            let mut v0 = Vertex::default();
+            let mut v1 = Vertex::default();
+            let mut v2 = Vertex::default();
+            let mut v3 = Vertex::default();
 
-                // tex coordinates
-                v0.tex.x = x;
-                v0.tex.y = y;
-                v1.tex.x = x + w;
-                v1.tex.y = y;
-                v2.tex.x = x + w;
-                v2.tex.y = y + h;
-                v3.tex.x = x;
-                v3.tex.y = y + h;
+            // tex coordinates
+            v0.tex.x = x;
+            v0.tex.y = y;
+            v1.tex.x = x + w;
+            v1.tex.y = y;
+            v2.tex.x = x + w;
+            v2.tex.y = y + h;
+            v3.tex.x = x;
+            v3.tex.y = y + h;
 
-                // position
-                v0.pos.x = dst.x as f32;
-                v0.pos.y = dst.y as f32;
-                v1.pos.x = dst.x as f32 + dst.width as f32;
-                v1.pos.y = dst.y as f32;
-                v2.pos.x = dst.x as f32 + dst.width as f32;
-                v2.pos.y = dst.y as f32 + dst.height as f32;
-                v3.pos.x = dst.x as f32;
-                v3.pos.y = dst.y as f32 + dst.height as f32;
+            // position
+            v0.pos.x = dst.x as f32;
+            v0.pos.y = dst.y as f32;
+            v1.pos.x = dst.x as f32 + dst.width as f32;
+            v1.pos.y = dst.y as f32;
+            v2.pos.x = dst.x as f32 + dst.width as f32;
+            v2.pos.y = dst.y as f32 + dst.height as f32;
+            v3.pos.x = dst.x as f32;
+            v3.pos.y = dst.y as f32 + dst.height as f32;
 
-                // color
-                v0.color = color4b(color.r, color.g, color.b, color.a);
-                v1.color = v0.color;
-                v2.color = v0.color;
-                v3.color = v0.color;
+            // color
+            v0.color = color4b(color.r, color.g, color.b, color.a);
+            v1.color = v0.color;
+            v2.color = v0.color;
+            v3.color = v0.color;
 
-                self.renderer.push_quad_vertices(&v0, &v1, &v2, &v3);
-            }
-            None => (),
+            self.renderer.push_quad_vertices(&v0, &v1, &v2, &v3);
         }
     }
 

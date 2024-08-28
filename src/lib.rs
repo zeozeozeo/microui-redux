@@ -182,17 +182,11 @@ pub enum NodeState {
 
 impl NodeState {
     pub fn is_expanded(&self) -> bool {
-        match self {
-            Self::Expanded => true,
-            _ => false,
-        }
+        matches!(self, Self::Expanded)
     }
 
     pub fn is_closed(&self) -> bool {
-        match self {
-            Self::Closed => true,
-            _ => false,
-        }
+        matches!(self, Self::Closed)
     }
 }
 
@@ -465,11 +459,11 @@ impl<PR: Clone> ContainerHandle<PR> {
         self.0.borrow().render(canvas)
     }
 
-    pub fn inner<'a>(&'a self) -> Ref<'a, Container<PR>> {
+    pub fn inner(&self) -> Ref<'_, Container<PR>> {
         self.0.borrow()
     }
 
-    pub fn inner_mut<'a>(&'a mut self) -> RefMut<'a, Container<PR>> {
+    pub fn inner_mut(&mut self) -> RefMut<'_, Container<PR>> {
         self.0.borrow_mut()
     }
 }
@@ -547,18 +541,17 @@ impl<PR: Clone, R: Renderer<PR>> Context<PR, R> {
         self.input.borrow_mut().epilogue();
 
         // prepare the next frame
-        self.hover_root = self.next_hover_root.clone();
+        self.hover_root.clone_from(&self.next_hover_root);
         self.next_hover_root = None;
         for r in &mut self.root_list {
             r.inner_mut().main.in_hover_root = false;
         }
-        match &mut self.hover_root {
-            Some(window) => window.inner_mut().main.in_hover_root = true,
-            _ => (),
+        if let Some(window) = &mut self.hover_root {
+            window.inner_mut().main.in_hover_root = true
         }
 
         // sort all windows
-        self.root_list.sort_by(|a, b| a.zindex().cmp(&b.zindex()));
+        self.root_list.sort_by_key(|a| a.zindex());
     }
 
     pub fn frame<F: FnOnce(&mut Self)>(&mut self, f: F) {
@@ -634,7 +627,7 @@ impl<PR: Clone, R: Renderer<PR>> Context<PR, R> {
     pub fn window<F: FnOnce(&mut Container<PR>)>(&mut self, window: &mut WindowHandle<PR>, opt: WidgetOption, f: F) {
         // call the window function if the window is open
         if self.begin_window(window, opt) {
-            window.inner_mut().main.style = self.style.clone();
+            window.inner_mut().main.style = self.style;
             f(&mut window.inner_mut().main);
             self.end_window(window);
         }
@@ -642,7 +635,7 @@ impl<PR: Clone, R: Renderer<PR>> Context<PR, R> {
 
     pub fn open_popup(&mut self, window: &mut WindowHandle<PR>) {
         self.next_hover_root = Some(window.clone());
-        self.hover_root = self.next_hover_root.clone();
+        self.hover_root.clone_from(&self.next_hover_root);
         window.inner_mut().main.rect = rect(self.input.borrow().mouse_pos.x, self.input.borrow().mouse_pos.y, 1, 1);
         window.inner_mut().activity = Activity::Open;
         window.inner_mut().main.in_hover_root = true;
@@ -655,6 +648,6 @@ impl<PR: Clone, R: Renderer<PR>> Context<PR, R> {
     }
 
     pub fn set_style(&mut self, style: &Style) {
-        self.style = style.clone()
+        self.style = *style
     }
 }

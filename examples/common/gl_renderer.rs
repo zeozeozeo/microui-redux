@@ -145,7 +145,7 @@ impl GLRenderer {
                     0,
                     glow::RGBA,
                     glow::UNSIGNED_BYTE,
-                    Some(&self.atlas.pixels().iter().map(|c| [c.x, c.y, c.z, c.w]).flatten().collect::<Vec<u8>>()),
+                    Some(&self.atlas.pixels().iter().flat_map(|c| [c.x, c.y, c.z, c.w]).collect::<Vec<u8>>()),
                 );
                 debug_assert!(self.gl.get_error() == 0);
             }
@@ -170,7 +170,7 @@ impl GLRenderer {
                 0,
                 glow::RGBA,
                 glow::UNSIGNED_BYTE,
-                Some(&atlas.pixels().iter().map(|c| [c.x, c.y, c.z, c.w]).flatten().collect::<Vec<u8>>()),
+                Some(&atlas.pixels().iter().flat_map(|c| [c.x, c.y, c.z, c.w]).collect::<Vec<u8>>()),
             );
             debug_assert!(gl.get_error() == 0);
             gl.tex_parameter_i32(glow::TEXTURE_2D, glow::TEXTURE_MIN_FILTER, glow::NEAREST as i32);
@@ -209,7 +209,7 @@ impl Renderer<()> for GLRenderer {
 
     fn flush(&mut self) {
         self.update_atlas();
-        if self.verts.len() == 0 || self.indices.len() == 0 {
+        if self.verts.is_empty() || self.indices.is_empty() {
             return;
         }
 
@@ -234,7 +234,7 @@ impl Renderer<()> for GLRenderer {
 
             // set the texture
             self.gl.bind_texture(glow::TEXTURE_2D, Some(self.tex_o));
-            self.gl.active_texture(glow::TEXTURE0 + 0);
+            self.gl.active_texture(glow::TEXTURE0);
             let tex_uniform_id = self.gl.get_uniform_location(self.program, "uTexture").unwrap();
             self.gl.uniform_1_i32(Some(&tex_uniform_id), 0);
             debug_assert_eq!(self.gl.get_error(), 0);
@@ -243,7 +243,7 @@ impl Renderer<()> for GLRenderer {
             let viewport = self.gl.get_uniform_location(self.program, "uTransform").unwrap();
             let tm = ortho4(0.0, self.width as f32, self.height as f32, 0.0, -1.0, 1.0).col.as_ptr() as *const _ as *const f32;
             let slice = std::slice::from_raw_parts(tm, 16);
-            self.gl.uniform_matrix_4_f32_slice(Some(&viewport), false, &slice);
+            self.gl.uniform_matrix_4_f32_slice(Some(&viewport), false, slice);
             debug_assert_eq!(self.gl.get_error(), 0);
 
             // set the vertex buffer
@@ -295,17 +295,17 @@ impl Renderer<()> for GLRenderer {
         }
 
         let is = self.verts.len() as u16;
-        self.indices.push(is + 0);
+        self.indices.push(is);
         self.indices.push(is + 1);
         self.indices.push(is + 2);
         self.indices.push(is + 2);
         self.indices.push(is + 3);
-        self.indices.push(is + 0);
+        self.indices.push(is);
 
-        self.verts.push(v0.clone());
-        self.verts.push(v1.clone());
-        self.verts.push(v2.clone());
-        self.verts.push(v3.clone());
+        self.verts.push(*v0);
+        self.verts.push(*v1);
+        self.verts.push(*v2);
+        self.verts.push(*v3);
 
         // This is needed so that the update happens immediately (not the most optimized way)
         if self.last_update_id != self.atlas.get_last_update_id() {

@@ -2,10 +2,7 @@ extern crate sdl2;
 #[path = "./common/mod.rs"]
 mod common;
 
-use sdl2::event::{Event, WindowEvent};
-use sdl2::keyboard::Keycode;
-use sdl2::video::GLProfile;
-use common::{atlas_config, GLRenderer};
+use common::atlas_config;
 use microui_redux::*;
 
 use crate::common::Application;

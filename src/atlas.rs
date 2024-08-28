@@ -81,15 +81,15 @@ pub struct IconId(usize);
 #[derive(Default, Copy, Clone)]
 pub struct SlotId(usize);
 
-impl Into<u32> for IconId {
-    fn into(self) -> u32 {
-        self.0 as _
+impl From<IconId> for u32 {
+    fn from(val: IconId) -> Self {
+        val.0 as _
     }
 }
 
-impl Into<u32> for SlotId {
-    fn into(self) -> u32 {
-        self.0 as _
+impl From<SlotId> for u32 {
+    fn from(val: SlotId) -> Self {
+        val.0 as _
     }
 }
 
@@ -201,7 +201,7 @@ pub mod builder {
     }
 
     impl Builder {
-        pub fn from_config<'a>(config: &'a Config) -> Result<Builder> {
+        pub fn from_config(config: &Config) -> Result<Builder> {
             let rp_config = rect_packer::Config {
                 width: config.texture_width as _,
                 height: config.texture_height as _,
@@ -241,7 +241,7 @@ pub mod builder {
             let rect = self.add_tile(width, height, pixels.as_slice())?;
             let id = self.atlas.icons.len();
             let icon = Icon { rect };
-            self.atlas.icons.push((Self::format_path(&path), icon.clone()));
+            self.atlas.icons.push((Self::format_path(path), icon.clone()));
             Ok(IconId(id))
         }
 
@@ -295,8 +295,7 @@ pub mod builder {
                         .borrow()
                         .pixels
                         .iter()
-                        .map(|c| [c.x, c.y, c.z, c.w])
-                        .flatten()
+                        .flat_map(|c| [c.x, c.y, c.z, c.w])
                         .collect::<Vec<u8>>()
                         .as_slice(),
                 )?;
@@ -309,7 +308,7 @@ pub mod builder {
         pub fn save_png_image(atlas: AtlasHandle, path: &str) -> Result<()> {
             // png writer
             let file = File::create(path)?;
-            let ref mut w = BufWriter::new(file);
+            let w = &mut BufWriter::new(file);
             let bytes = Self::png_image_bytes(atlas)?;
             w.write_all(bytes.as_slice())?;
             Ok(())
@@ -365,7 +364,7 @@ pub mod builder {
             let mut data = Vec::new();
             File::open(path).unwrap().read_to_end(&mut data).unwrap();
 
-            let font = fontdue::Font::from_bytes(data, FontSettings::default()).map_err(|error| Error::new(ErrorKind::Other, format!("{}", error)))?;
+            let font = fontdue::Font::from_bytes(data, FontSettings::default()).map_err(|error| Error::new(ErrorKind::Other, error.to_string()))?;
             Ok(font)
         }
 
@@ -412,12 +411,8 @@ pub struct AtlasSource<'a> {
 }
 
 impl AtlasHandle {
-    pub fn from<'a>(source: &AtlasSource<'a>) -> Self {
-        let icons: Vec<(String, Icon)> = source
-            .icons
-            .iter()
-            .map(|(name, rect)| (name.to_string(), Icon { rect: rect.clone() }))
-            .collect();
+    pub fn from(source: &AtlasSource<'_>) -> Self {
+        let icons: Vec<(String, Icon)> = source.icons.iter().map(|(name, rect)| (name.to_string(), Icon { rect: *rect })).collect();
         let fonts: Vec<(String, Font)> = source
             .fonts
             .iter()
@@ -425,12 +420,12 @@ impl AtlasHandle {
                 let font = Font {
                     line_size: f.line_size,
                     font_size: f.font_size,
-                    entries: f.entries.iter().map(|(ch, e)| (ch.clone(), e.clone())).collect(),
+                    entries: f.entries.iter().map(|(ch, e)| (*ch, e.clone())).collect(),
                 };
                 (name.to_string(), font)
             })
             .collect();
-        let slots: Vec<Recti> = source.slots.iter().map(|p| *p).collect();
+        let slots: Vec<Recti> = source.slots.to_vec();
         let pixels = match source.format {
             SourceFormat::Raw => {
                 let mut v = Vec::new();
@@ -474,12 +469,12 @@ impl AtlasHandle {
                 .as_str(),
             );
         }
-        icons.push_str("]");
+        icons.push(']');
         let mut slots = String::from_str("&[\n").unwrap();
         for r in &self.0.borrow().slots {
             slots.push_str(format!("Rect {{ x: {}, y: {}, width: {}, height: {} }},", r.x, r.y, r.width, r.height,).as_str());
         }
-        slots.push_str("]");
+        slots.push(']');
         let mut fonts = String::from_str("&[\n").unwrap();
         for (n, f) in &self.0.borrow().fonts {
             let mut char_entries = String::from_str("&[\n").unwrap();
@@ -506,13 +501,13 @@ impl AtlasHandle {
                 .as_str(),
             );
         }
-        fonts.push_str("]");
+        fonts.push(']');
         font_meta.push_str(format!("icons: {},\n", icons).as_str());
         font_meta.push_str(format!("fonts: {},\n", fonts).as_str());
         font_meta.push_str(format!("slots: {},\n", slots).as_str());
         let (source_pixels, source_format) = match format {
             SourceFormat::Raw => (
-                self.0.borrow().pixels.iter().map(|p| [p.x, p.y, p.z, p.w]).flatten().collect::<Vec<_>>(),
+                self.0.borrow().pixels.iter().flat_map(|p| [p.x, p.y, p.z, p.w]).collect::<Vec<_>>(),
                 "SourceFormat::Raw",
             ),
             #[cfg(feature = "png_source")]

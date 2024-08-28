@@ -6,9 +6,6 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use rand::rngs::ThreadRng;
-use sdl2::event::{Event, WindowEvent};
-use sdl2::keyboard::Keycode;
-use sdl2::video::GLProfile;
 use common::{atlas_config, GLRenderer};
 use microui_redux::*;
 use rand::*;
@@ -140,7 +137,7 @@ impl<'a> State<'a> {
     }
 
     fn write_log(&mut self, text: &str) {
-        if self.logbuf.len() != 0 {
+        if !self.logbuf.is_empty() {
             self.logbuf.push('\n');
         }
         for c in text.chars() {
@@ -258,13 +255,13 @@ impl<'a> State<'a> {
 
             self.slot_header = container.header("Slots", self.slot_header, |container| {
                 container.set_row_widths_height(&[-1], 67);
-                container.button_ex2("Slot 1", Some(self.slots[0].clone()), WidgetOption::NONE);
-                container.button_ex3("Slot 2 - Green", Some(self.slots[1].clone()), WidgetOption::NONE, Rc::new(|_x, _y| {
+                container.button_ex2("Slot 1", Some(self.slots[0]), WidgetOption::NONE);
+                container.button_ex3("Slot 2 - Green", Some(self.slots[1]), WidgetOption::NONE, Rc::new(|_x, _y| {
                     color4b(0x00, 0xFF, 0x00, 0xFF)
                 }));
-                container.button_ex2("Slot 3", Some(self.slots[2].clone()), WidgetOption::NONE);
+                container.button_ex2("Slot 3", Some(self.slots[2]), WidgetOption::NONE);
                 let rng = self.rng.clone();
-                container.button_ex3("Slot 2 - Random", Some(self.slots[1].clone()), WidgetOption::NONE, Rc::new(move |_x, _y| {
+                container.button_ex3("Slot 2 - Random", Some(self.slots[1]), WidgetOption::NONE, Rc::new(move |_x, _y| {
                     let mut rm = rng.borrow_mut();
                     color4b(rm.gen(), rm.gen(), rm.gen(), rm.gen())
                 }));
@@ -327,17 +324,17 @@ impl<'a> State<'a> {
         let res = ctx.slider_ex(&mut tmp, low as Real, high as Real, 0 as Real, 0, WidgetOption::ALIGN_CENTER);
         *value = tmp as u8;
         ctx.idmngr.pop_id();
-        return res;
+        res
     }
     fn style_window(&mut self, ctx: &mut Context) {
         ctx.window(&mut self.style_window.as_mut().unwrap().clone(), WidgetOption::NONE, |container| {
             let sw = (container.body.width as f64 * 0.14) as i32;
             container.set_row_widths_height(&[80, sw, sw, sw, sw, -1], 0);
             let mut i = 0;
-            while self.label_colors[i].label.len() > 0 {
+            while !self.label_colors[i].label.is_empty() {
                 container.label(self.label_colors[i].label);
                 unsafe {
-                    let color = self.style.colors.as_mut_ptr().offset(i as isize);
+                    let color = self.style.colors.as_mut_ptr().add(i);
                     self.uint8_slider(&mut (*color).r, 0, 255, container);
                     self.uint8_slider(&mut (*color).g, 0, 255, container);
                     self.uint8_slider(&mut (*color).b, 0, 255, container);

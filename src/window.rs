@@ -73,7 +73,7 @@ pub(crate) struct Window<PR> {
 }
 
 impl<PR: Clone> Window<PR> {
-    pub fn window(name: &str, atlas: AtlasHandle, style: &Style, input: Rc<RefCell<Input>>, initial_rect: Recti) -> Self {
+    pub fn new(name: &str, atlas: AtlasHandle, style: &Style, input: Rc<RefCell<Input>>, initial_rect: Recti) -> Self {
         let mut main = Container::new(name, atlas, style, input);
         main.rect = initial_rect;
 
@@ -96,10 +96,7 @@ impl<PR: Clone> Window<PR> {
     }
 
     pub fn is_popup(&self) -> bool {
-        match self.ty {
-            Type::Popup => true,
-            _ => false,
-        }
+        matches!(self.ty, Type::Popup)
     }
 
     #[inline(never)]
@@ -188,7 +185,7 @@ pub struct WindowHandle<PR>(Rc<RefCell<Window<PR>>>);
 
 impl<PR: Clone> WindowHandle<PR> {
     pub(crate) fn window(name: &str, atlas: AtlasHandle, style: &Style, input: Rc<RefCell<Input>>, initial_rect: Recti) -> Self {
-        Self(Rc::new(RefCell::new(Window::window(name, atlas, style, input, initial_rect))))
+        Self(Rc::new(RefCell::new(Window::new(name, atlas, style, input, initial_rect))))
     }
 
     pub(crate) fn popup(name: &str, atlas: AtlasHandle, style: &Style, input: Rc<RefCell<Input>>) -> Self {
@@ -196,17 +193,14 @@ impl<PR: Clone> WindowHandle<PR> {
     }
 
     pub fn is_open(&self) -> bool {
-        match self.0.borrow().activity {
-            Activity::Open => true,
-            _ => false,
-        }
+        matches!(self.0.borrow().activity, Activity::Open)
     }
 
-    pub(crate) fn inner_mut<'a>(&'a mut self) -> RefMut<'a, Window<PR>> {
+    pub(crate) fn inner_mut(&mut self) -> RefMut<'_, Window<PR>> {
         self.0.borrow_mut()
     }
 
-    pub(crate) fn inner<'a>(&'a self) -> Ref<'a, Window<PR>> {
+    pub(crate) fn inner(&self) -> Ref<'_, Window<PR>> {
         self.0.borrow()
     }
 
